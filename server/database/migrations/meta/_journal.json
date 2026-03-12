@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1773200913387,
+      "tag": "0000_rich_krista_starr",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1773200913388,
+      "tag": "0001_soft_delete_sites",
+      "breakpoints": true
+    }
+  ]
+}
