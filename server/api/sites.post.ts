@@ -83,12 +83,11 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     // Обработка ошибок валидации Зод
     if (error instanceof z.ZodError) {
-      const fieldErrors = error.flatten().fieldErrors;
       throw createError({
         statusCode: 400,
         statusMessage: 'Validation Error',
         data: {
-          errors: fieldErrors,
+          errors: error.issues,
         },
       });
     }

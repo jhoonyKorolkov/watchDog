@@ -75,6 +75,49 @@ const handleDeleteConfirm = async () => {
   }
 };
 
+/**
+ * Переключает статус активности сайта (isActive).
+ * @param site - объект сайта
+ * @param newValue - новое значение от USwitch (true/false)
+ */
+const switchActivateSite = async (site: SiteEntry, newValue: boolean) => {
+  try {
+    // Конвертируем boolean в 0/1 для SQLite
+    const isActive = newValue ? 1 : 0;
+
+    await $fetch(`/api/sites/${site.id}`, {
+      method: 'PATCH',
+      body: { isActive },
+    });
+
+    // Перезагружаем данные с сервера для обновления UI
+    await refresh();
+
+    toast.add({
+      title: isActive ? 'Сайт активирован' : 'Сайт деактивирован',
+      description: `«${site.name}» теперь ${isActive ? 'активен' : 'неактивен'}.`,
+      color: isActive ? 'success' : 'neutral',
+    });
+  } catch (error: unknown) {
+    const apiMessage = (error as { data?: { message?: string } })?.data
+      ?.message;
+
+    const appError = createError({
+      statusCode: (error as { status?: number })?.status ?? 500,
+      statusMessage: apiMessage ?? 'Ошибка при переключении статуса сайта',
+    });
+
+    toast.add({
+      title: 'Ошибка',
+      description: appError.statusMessage,
+      color: 'error',
+    });
+
+    // При ошибке тоже обновляем данные, чтобы вернуть переключатель в исходное состояние
+    await refresh();
+  }
+};
+
 // useColorMode — composable Nuxt UI/Color Mode для переключения темы
 const colorMode = useColorMode();
 
@@ -115,42 +158,77 @@ const getStatusIcon = (status?: number) => {
           </p>
         </div>
         <div class="flex items-center gap-3">
-          <!-- Кнопка переключения светлой/тёмной темы -->
-          <UButton
-            :icon="
-              colorMode.value === 'dark'
-                ? 'heroicons:sun-20-solid'
-                : 'heroicons:moon-20-solid'
-            "
-            size="lg"
-            color="neutral"
-            variant="ghost"
-            :aria-label="
-              colorMode.value === 'dark'
-                ? 'Переключить на светлую тему'
-                : 'Переключить на тёмную тему'
-            "
-            @click="toggleColorMode"
-          />
-          <!-- Кнопка открывает UModal с формой добавления сайта -->
-          <UButton
-            icon="heroicons:plus-20-solid"
-            size="lg"
-            @click="isModalOpen = true"
-          >
-            Добавить сайт
-          </UButton>
-          <UButton
-            icon="heroicons:arrow-path-20-solid"
-            size="lg"
-            color="neutral"
-            variant="subtle"
-            @click="() => refresh()"
-            :loading="pending"
-            :disabled="pending"
-          >
-            Обновить
-          </UButton>
+          <!--
+            ClientOnly: Рендерит содержимое ТОЛЬКО на клиенте, пропуская SSR.
+
+            Зачем нужен здесь:
+            - colorMode читает localStorage при инициализации
+            - На сервере localStorage недоступен, поэтому значение может отличаться
+            - Это приводит к hydration mismatch: серверный HTML ≠ клиентский HTML
+
+            Как работает:
+            1. Сервер: рендерит пустой placeholder (комментарий или <span>)
+            2. Клиент: заменяет placeholder на реальное содержимое после монтирования
+            3. Структура <div> остается стабильной, меняется только содержимое
+
+            Когда использовать ClientOnly:
+            - Компоненты, зависящие от browser API (window, localStorage, document)
+            - Интерактивные элементы с динамическим состоянием (темы, локализация)
+            - Сторонние библиотеки, не поддерживающие SSR
+            - Компоненты с рандомными значениями или временными метками
+
+            Важно: контейнер (<div>) должен быть СНАРУЖИ ClientOnly,
+            чтобы структура DOM оставалась идентичной на сервере и клиенте.
+
+            #fallback слот: показывается на сервере и до hydration на клиенте.
+            Создает плавный переход, избегая "прыжков" интерфейса.
+          -->
+          <ClientOnly>
+            <template #fallback>
+              <!-- Placeholder: skeleton-кнопки для плавного перехода -->
+              <USkeleton class="h-10 w-10 rounded-md" />
+              <USkeleton class="h-10 w-36 rounded-md" />
+              <USkeleton class="h-10 w-28 rounded-md" />
+            </template>
+
+            <!-- Реальные кнопки: появляются после hydration -->
+            <!-- Кнопка переключения светлой/тёмной темы -->
+            <UButton
+              :icon="
+                colorMode.value === 'dark'
+                  ? 'heroicons:sun-20-solid'
+                  : 'heroicons:moon-20-solid'
+              "
+              size="lg"
+              color="neutral"
+              variant="ghost"
+              :aria-label="
+                colorMode.value === 'dark'
+                  ? 'Переключить на светлую тему'
+                  : 'Переключить на тёмную тему'
+              "
+              @click="toggleColorMode"
+            />
+            <!-- Кнопка открывает UModal с формой добавления сайта -->
+            <UButton
+              icon="heroicons:plus-20-solid"
+              size="lg"
+              @click="isModalOpen = true"
+            >
+              Добавить сайт
+            </UButton>
+            <UButton
+              icon="heroicons:arrow-path-20-solid"
+              size="lg"
+              color="neutral"
+              variant="subtle"
+              @click="() => refresh()"
+              :loading="pending"
+              :disabled="pending"
+            >
+              Обновить
+            </UButton>
+          </ClientOnly>
         </div>
       </div>
 
@@ -207,13 +285,59 @@ const getStatusIcon = (status?: number) => {
         </template>
       </UModal>
 
-      <!-- Сетка карточек -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Прелоадер: показывается пока загружаются данные -->
+      <div
+        v-if="pending"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        <!-- Генерируем 3 skeleton-карточки для эффекта загрузки -->
+        <UCard v-for="i in 3" :key="i" class="animate-pulse">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <USkeleton class="h-6 w-32" />
+              <USkeleton class="h-6 w-24" />
+            </div>
+          </template>
+
+          <div class="space-y-4">
+            <!-- URL skeleton -->
+            <div>
+              <USkeleton class="h-3 w-12 mb-2" />
+              <USkeleton class="h-4 w-full" />
+            </div>
+
+            <!-- Интервал и Response Time skeleton -->
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <USkeleton class="h-3 w-16 mb-2" />
+                <USkeleton class="h-5 w-12" />
+              </div>
+              <div>
+                <USkeleton class="h-3 w-12 mb-2" />
+                <USkeleton class="h-5 w-16" />
+              </div>
+            </div>
+          </div>
+
+          <template #footer>
+            <div class="flex items-center justify-between">
+              <USkeleton class="h-4 w-40" />
+              <div class="flex items-center gap-1">
+                <USkeleton class="h-8 w-8 rounded-md" />
+                <USkeleton class="h-8 w-8 rounded-md" />
+                <USkeleton class="h-8 w-8 rounded-md" />
+              </div>
+            </div>
+          </template>
+        </UCard>
+      </div>
+
+      <!-- Сетка карточек: показывается когда данные загружены -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <UCard
           v-for="site in sites"
           :key="site.id"
           class="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-          @click="navigateTo(`/sites/${site.id}`)"
         >
           <template #header>
             <div class="flex items-center justify-between">
@@ -231,6 +355,11 @@ const getStatusIcon = (status?: number) => {
                 />
                 {{ site.checks?.[0]?.status || 'Нет данных' }}
               </UBadge>
+              <USwitch
+                :model-value="site.isActive === 1"
+                @update:model-value="(val) => switchActivateSite(site, val)"
+                aria-label="Активировать/деактивировать сайт"
+              />
             </div>
           </template>
 
@@ -309,32 +438,54 @@ const getStatusIcon = (status?: number) => {
                 </span>
               </div>
               <div class="flex items-center gap-1">
-                <!-- Кнопка открывает модалку редактирования с данными этой карточки -->
-                <UButton
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  icon="heroicons:pencil-square-20-solid"
-                  aria-label="Редактировать сайт"
-                  @click.stop="openEditModal(site)"
-                />
-                <!-- Кнопка открывает модалку подтверждения удаления -->
-                <UButton
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  icon="heroicons:trash-20-solid"
-                  aria-label="Удалить сайт"
-                  @click.stop="openDeleteModal(site)"
-                />
+                <ClientOnly>
+                  <template #fallback>
+                    <!-- Placeholder: 3 skeleton-кнопки -->
+                    <USkeleton class="h-8 w-8 rounded-md" />
+                    <USkeleton class="h-8 w-8 rounded-md" />
+                    <USkeleton class="h-8 w-8 rounded-md" />
+                  </template>
+
+                  <!-- Реальные кнопки действий -->
+                  <!-- Кнопка открывает модалку редактирования с данными этой карточки -->
+                  <UButton
+                    size="md"
+                    color="info"
+                    variant="ghost"
+                    icon="heroicons:eye-20-solid"
+                    aria-label="Просмотреть детали сайта"
+                    @click="navigateTo(`/sites/${site.id}`)"
+                  />
+
+                  <UButton
+                    size="md"
+                    color="neutral"
+                    variant="ghost"
+                    icon="heroicons:pencil-square-20-solid"
+                    aria-label="Редактировать сайт"
+                    @click.stop="openEditModal(site)"
+                  />
+                  <!-- Кнопка открывает модалку подтверждения удаления -->
+                  <UButton
+                    size="md"
+                    color="error"
+                    variant="ghost"
+                    icon="heroicons:trash-20-solid"
+                    aria-label="Удалить сайт"
+                    @click.stop="openDeleteModal(site)"
+                  />
+                </ClientOnly>
               </div>
             </div>
           </template>
         </UCard>
       </div>
 
-      <!-- Пусто -->
-      <div v-if="!sites || sites.length === 0" class="text-center py-12">
+      <!-- Пусто: показывается когда данные загружены, но список пуст -->
+      <div
+        v-if="!pending && (!sites || sites.length === 0)"
+        class="text-center py-12"
+      >
         <UIcon
           name="heroicons:inbox-20-solid"
           class="w-12 h-12 mx-auto mb-4 text-slate-400"

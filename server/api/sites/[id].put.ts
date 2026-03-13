@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 400,
       statusMessage: 'Validation Error',
-      data: { errors: parsed.error.flatten().fieldErrors },
+      data: { errors: parsed.error.issues },
     });
   }
 
