@@ -5,7 +5,7 @@
  * Использование: GET /api/cache/status
  */
 export default defineEventHandler(async (event) => {
-  const storage = useStorage('data');
+  const storage = useStorage('cache');
 
   // Получаем данные из кэша
   const cachedData = await storage.getItem('sites:status');

@@ -5,7 +5,7 @@
  * Использование: GET /api/cache/keys
  */
 export default defineEventHandler(async (event) => {
-  const storage = useStorage('data');
+  const storage = useStorage('cache');
 
   // Получаем все ключи в хранилище
   const keys = await storage.getKeys();

@@ -4,7 +4,7 @@
  */
 export default defineEventHandler(async (event) => {
   // Пытаемся получить данные из кэша
-  const storage = useStorage('data');
+  const storage = useStorage('cache');
   const cachedData = await storage.getItem('sites:status');
 
   // Если данные в кэше есть - возвращаем их немедленно

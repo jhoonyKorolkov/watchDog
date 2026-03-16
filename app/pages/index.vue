@@ -1,5 +1,29 @@
 <script setup lang="ts">
-const { data: sites, refresh, pending } = await useFetch('/api/status');
+// Определяем тип данных сайта с проверками
+// Необходим из-за использования кэша, где теряется автоматический вывод типов
+type SiteWithChecks = {
+  id: number;
+  url: string;
+  name: string;
+  interval: number;
+  isActive: number;
+  deletedAt: number | null;
+  checks: Array<{
+    id: number;
+    siteId: number;
+    status: number;
+    responseTime: number;
+    timestamp: number;
+    error: string | null;
+    createdAt: number;
+  }>;
+};
+
+const {
+  data: sites,
+  refresh,
+  pending,
+} = await useFetch<SiteWithChecks[]>('/api/status');
 
 const toast = useToast();
 
@@ -16,7 +40,7 @@ const handleSiteAdded = () => {
 };
 
 // Тип одной записи из ответа /api/status (сайт + последний check)
-type SiteEntry = NonNullable<typeof sites.value>[number];
+type SiteEntry = SiteWithChecks;
 
 // null = модалка закрыта; SiteEntry = открыта с данными этого сайта
 const editingSite = ref<SiteEntry | null>(null);

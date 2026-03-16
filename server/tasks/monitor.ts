@@ -169,7 +169,7 @@ export default defineTask({
     });
 
     // Сохраняем snapshot в Nitro Storage для быстрого доступа
-    const storage = useStorage('data');
+    const storage = useStorage('cache');
     await storage.setItem('sites:status', sitesWithStatus);
     console.log('💾 Кэш статусов сайтов обновлен');
 
