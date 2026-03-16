@@ -56,7 +56,8 @@ const avgResponseTime = computed(() => {
   return Math.round(sum / checks.length);
 });
 
-// Генерация тестовых данных
+// Генерация тестовых данных (только в dev режиме)
+const isDev = import.meta.dev;
 const isGenerating = ref(false);
 const generationError = ref<string | null>(null);
 
@@ -139,6 +140,7 @@ const generateTestData = async () => {
           </div>
           <div class="flex gap-2">
             <UButton
+              v-if="isDev"
               icon="heroicons:beaker-20-solid"
               color="warning"
               variant="soft"

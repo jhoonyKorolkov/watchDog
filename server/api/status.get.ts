@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   // Если данные в кэше есть - возвращаем их немедленно
   if (cachedData) {
-    console.log('✅ Данные получены из кэша');
+    // console.log('✅ Данные получены из кэша');
     return cachedData;
   }
 

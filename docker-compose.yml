@@ -1,0 +1,54 @@
+# Docker Compose конфигурация для WatchDog Monitoring
+version: '3.8'
+
+services:
+  watchdog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: watchdog-monitor
+    ports:
+      - '3000:3000'
+    environment:
+      # Session secret для nuxt-auth-utils (обязательно изменить!)
+      - NUXT_SESSION_PASSWORD=${NUXT_SESSION_PASSWORD}
+
+      # Пароль администратора
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+
+      # Путь к базе данных SQLite
+      - DATABASE_URL=/app/.data/sqlite.db
+
+      # Настройки мониторинга
+      - MONITOR_ENABLED=${MONITOR_ENABLED:-true}
+      - MONITOR_SCHEDULE=${MONITOR_SCHEDULE:-*/1 * * * *}
+
+      # Telegram Bot настройки (опционально)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+
+      # Настройки Node.js
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+    volumes:
+      # Персистентное хранилище для SQLite базы данных
+      - watchdog-data:/app/.data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://localhost:3000/api/status', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  # Named volume для данных базы
+  watchdog-data:
+    driver: local

@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
+import { ro } from '@nuxt/ui/runtime/locale/index.js';
 
 export const sites = sqliteTable('sites', {
   id: integer().primaryKey({ autoIncrement: true }),
@@ -21,6 +22,14 @@ export const checks = sqliteTable('checks', {
   timestamp: integer().notNull(), // Временная метка проверки (Unix time)
   error: text('error'), // Сообщение об ошибке, если проверка не удалась
   createdAt: integer('created_at').notNull(), // Временная метка создания записи (Unix time)
+});
+
+export const users = sqliteTable('users', {
+  id: integer().primaryKey({ autoIncrement: true }),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  role: text('role').notNull().default('user'), // 'admin' или 'user'
+  createdAt: integer('created_at').notNull(), // Временная метка создания пользователя (Unix time)
 });
 
 // 1. Описываем связи для таблицы сайтов

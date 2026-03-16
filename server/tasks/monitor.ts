@@ -130,6 +130,12 @@ async function checkSite(site: typeof sites.$inferSelect): Promise<void> {
 
 export default defineTask({
   async run() {
+    // Проверка: мониторинг можно отключить через MONITOR_ENABLED=false
+    if (process.env.MONITOR_ENABLED === 'false') {
+      console.log('[Monitor] Мониторинг отключен через MONITOR_ENABLED=false');
+      return { success: true, skipped: true, reason: 'disabled' };
+    }
+
     console.log('Пес вышел на охоту... 🔍');
 
     // 1. Получаем список активных сайтов из БД, исключая мягко удалённые

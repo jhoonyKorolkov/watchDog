@@ -8,6 +8,14 @@ import { checks } from '../../../database/schema';
  * ТОЛЬКО ДЛЯ РАЗРАБОТКИ!
  */
 export default defineEventHandler(async (event) => {
+  // Проверка: эндпоинт доступен только в dev режиме
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({
+      statusCode: 403,
+      message: 'Генерация тестовых данных доступна только в режиме разработки',
+    });
+  }
+
   const siteId = Number(getRouterParam(event, 'id'));
 
   // Валидация ID

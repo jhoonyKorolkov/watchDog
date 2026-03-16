@@ -174,11 +174,11 @@ const getStatusIcon = (status?: number) => {
       <!-- Заголовок -->
       <div class="flex items-center justify-between mb-12">
         <div>
-          <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+          <!-- <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">
             🐕 Сторожевой Пёс
-          </h1>
+          </h1> -->
           <p class="text-lg text-slate-600 dark:text-slate-400">
-            Мониторинг твоих проектов в реальном времени
+            Мониторинг проектов в реальном времени
           </p>
         </div>
         <div class="flex items-center gap-3">
