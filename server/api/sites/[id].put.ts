@@ -1,8 +1,8 @@
 import { getRouterParam, readBody } from 'h3';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { db } from '../../utils/db';
 import { sites } from '../../database/schema';
+import { invalidateSitesCache } from '../../utils/cache';
 
 // Схема частичного обновления — все поля необязательны
 const updateSiteSchema = z.object({
@@ -63,6 +63,9 @@ export default defineEventHandler(async (event) => {
     .set(parsed.data)
     .where(eq(sites.id, id))
     .returning();
+
+  // Инвалидируем кэш после обновления
+  await invalidateSitesCache();
 
   return { success: true, data: updated };
 });

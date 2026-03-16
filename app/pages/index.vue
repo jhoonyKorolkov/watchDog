@@ -144,7 +144,7 @@ const getStatusIcon = (status?: number) => {
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+    class="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
   >
     <div class="container mx-auto py-12 px-4">
       <!-- Заголовок -->
@@ -158,31 +158,6 @@ const getStatusIcon = (status?: number) => {
           </p>
         </div>
         <div class="flex items-center gap-3">
-          <!--
-            ClientOnly: Рендерит содержимое ТОЛЬКО на клиенте, пропуская SSR.
-
-            Зачем нужен здесь:
-            - colorMode читает localStorage при инициализации
-            - На сервере localStorage недоступен, поэтому значение может отличаться
-            - Это приводит к hydration mismatch: серверный HTML ≠ клиентский HTML
-
-            Как работает:
-            1. Сервер: рендерит пустой placeholder (комментарий или <span>)
-            2. Клиент: заменяет placeholder на реальное содержимое после монтирования
-            3. Структура <div> остается стабильной, меняется только содержимое
-
-            Когда использовать ClientOnly:
-            - Компоненты, зависящие от browser API (window, localStorage, document)
-            - Интерактивные элементы с динамическим состоянием (темы, локализация)
-            - Сторонние библиотеки, не поддерживающие SSR
-            - Компоненты с рандомными значениями или временными метками
-
-            Важно: контейнер (<div>) должен быть СНАРУЖИ ClientOnly,
-            чтобы структура DOM оставалась идентичной на сервере и клиенте.
-
-            #fallback слот: показывается на сервере и до hydration на клиенте.
-            Создает плавный переход, избегая "прыжков" интерфейса.
-          -->
           <ClientOnly>
             <template #fallback>
               <!-- Placeholder: skeleton-кнопки для плавного перехода -->
@@ -337,28 +312,34 @@ const getStatusIcon = (status?: number) => {
         <UCard
           v-for="site in sites"
           :key="site.id"
-          class="hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+          class="hover:shadow-lg transition-shadow duration-200"
         >
           <template #header>
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white">
-                {{ site.name }}
-              </h3>
-              <UBadge
-                :color="getStatusColor(site.checks?.[0]?.status)"
-                variant="subtle"
-                class="text-sm"
-              >
-                <UIcon
-                  :name="getStatusIcon(site.checks?.[0]?.status)"
-                  class="w-4 h-4 mr-1"
-                />
-                {{ site.checks?.[0]?.status || 'Нет данных' }}
-              </UBadge>
+              <div class="flex items-center gap-3">
+                <h3
+                  class="text-lg font-semibold text-slate-900 dark:text-white"
+                >
+                  {{ site.name }}
+                </h3>
+                <UBadge
+                  :color="getStatusColor(site.checks?.[0]?.status)"
+                  variant="subtle"
+                  class="text-sm"
+                >
+                  <UIcon
+                    :name="getStatusIcon(site.checks?.[0]?.status)"
+                    class="w-4 h-4 mr-1"
+                  />
+                  {{ site.checks?.[0]?.status || 'Нет данных' }}
+                </UBadge>
+              </div>
+
               <USwitch
                 :model-value="site.isActive === 1"
                 @update:model-value="(val) => switchActivateSite(site, val)"
                 aria-label="Активировать/деактивировать сайт"
+                class="cursor-pointer"
               />
             </div>
           </template>
@@ -455,6 +436,7 @@ const getStatusIcon = (status?: number) => {
                     icon="heroicons:eye-20-solid"
                     aria-label="Просмотреть детали сайта"
                     @click="navigateTo(`/sites/${site.id}`)"
+                    class="cursor-pointer"
                   />
 
                   <UButton
@@ -463,7 +445,8 @@ const getStatusIcon = (status?: number) => {
                     variant="ghost"
                     icon="heroicons:pencil-square-20-solid"
                     aria-label="Редактировать сайт"
-                    @click.stop="openEditModal(site)"
+                    @click="openEditModal(site)"
+                    class="cursor-pointer"
                   />
                   <!-- Кнопка открывает модалку подтверждения удаления -->
                   <UButton
@@ -472,7 +455,8 @@ const getStatusIcon = (status?: number) => {
                     variant="ghost"
                     icon="heroicons:trash-20-solid"
                     aria-label="Удалить сайт"
-                    @click.stop="openDeleteModal(site)"
+                    @click="openDeleteModal(site)"
+                    class="cursor-pointer"
                   />
                 </ClientOnly>
               </div>

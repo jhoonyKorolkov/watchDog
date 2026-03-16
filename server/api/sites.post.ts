@@ -2,6 +2,7 @@ import { defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { db } from '../utils/db';
 import { sites } from '../database/schema';
+import { invalidateSitesCache } from '../utils/cache';
 
 // Зод схема для валидации данных при создании сайта
 const createSiteSchema = z.object({
@@ -73,6 +74,9 @@ export default defineEventHandler(async (event) => {
         isActive: 1,
       })
       .returning();
+
+    // Инвалидируем кэш после добавления нового сайта
+    await invalidateSitesCache();
 
     // Возвращаем успешный ответ с данными созданного сайта
     return {

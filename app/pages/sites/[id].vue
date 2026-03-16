@@ -55,11 +55,42 @@ const avgResponseTime = computed(() => {
   const sum = checks.reduce((acc, c) => acc + c.responseTime, 0);
   return Math.round(sum / checks.length);
 });
+
+// Генерация тестовых данных
+const isGenerating = ref(false);
+const generationError = ref<string | null>(null);
+
+const generateTestData = async () => {
+  if (isGenerating.value) return;
+
+  isGenerating.value = true;
+  generationError.value = null;
+
+  try {
+    const result = await $fetch(`/api/sites/${siteId}/generate-test-data`, {
+      method: 'POST',
+      timeout: 30000, // 30 секунд таймаут
+    });
+
+    console.log('Тестовые данные созданы:', result);
+
+    // Небольшая задержка перед обновлением, чтобы данные точно записались
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Обновляем данные после генерации
+    await refresh();
+  } catch (err: any) {
+    console.error('Ошибка генерации тестовых данных:', err);
+    generationError.value = err.message || 'Не удалось создать тестовые данные';
+  } finally {
+    isGenerating.value = false;
+  }
+};
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+    class="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
   >
     <div class="container mx-auto py-12 px-4 max-w-4xl">
       <!-- Кнопка назад -->
@@ -106,15 +137,27 @@ const avgResponseTime = computed(() => {
               {{ site.url }}
             </a>
           </div>
-          <UButton
-            icon="heroicons:arrow-path-20-solid"
-            color="neutral"
-            variant="subtle"
-            :loading="pending"
-            @click="() => refresh()"
-          >
-            Обновить
-          </UButton>
+          <div class="flex gap-2">
+            <UButton
+              icon="heroicons:beaker-20-solid"
+              color="warning"
+              variant="soft"
+              :loading="isGenerating"
+              @click="generateTestData"
+              title="Генерировать 50 тестовых проверок с разными статусами"
+            >
+              Тестовые данные
+            </UButton>
+            <UButton
+              icon="heroicons:arrow-path-20-solid"
+              color="neutral"
+              variant="subtle"
+              :loading="pending"
+              @click="() => refresh()"
+            >
+              Обновить
+            </UButton>
+          </div>
         </div>
 
         <!-- Сводка: 3 ключевые метрики -->
@@ -210,6 +253,11 @@ const avgResponseTime = computed(() => {
           </dl>
         </UCard>
 
+        <!-- График статистики -->
+        <div class="mb-8">
+          <SiteStatsChart :site-id="siteId" />
+        </div>
+
         <!-- Таблица истории проверок -->
         <UCard>
           <template #header>
@@ -234,64 +282,66 @@ const avgResponseTime = computed(() => {
           </div>
 
           <!-- Таблица -->
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-slate-200 dark:border-slate-700">
-                  <th
-                    class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
-                  >
-                    Время
-                  </th>
-                  <th
-                    class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
-                  >
-                    Статус
-                  </th>
-                  <th
-                    class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
-                  >
-                    Ответ, мс
-                  </th>
-                  <th
-                    class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
-                  >
-                    Ошибка
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="check in site.checks"
-                  :key="check.id"
-                  class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                >
-                  <td
-                    class="py-2 px-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap"
-                  >
-                    {{ formatDate(check.timestamp) }}
-                  </td>
-                  <td class="py-2 px-3">
-                    <UBadge
-                      :color="getStatusColor(check.status)"
-                      variant="subtle"
-                      size="sm"
+          <ClientOnly v-else>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 dark:border-slate-700">
+                    <th
+                      class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
                     >
-                      {{ check.status || 'timeout' }}
-                    </UBadge>
-                  </td>
-                  <td class="py-2 px-3 text-slate-700 dark:text-slate-300">
-                    {{ check.responseTime }} мс
-                  </td>
-                  <td
-                    class="py-2 px-3 text-red-500 dark:text-red-400 text-xs font-mono"
+                      Время
+                    </th>
+                    <th
+                      class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
+                    >
+                      Статус
+                    </th>
+                    <th
+                      class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
+                    >
+                      Ответ, мс
+                    </th>
+                    <th
+                      class="text-left py-2 px-3 text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide"
+                    >
+                      Ошибка
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="check in site.checks"
+                    :key="check.id"
+                    class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
-                    {{ check.error ?? '—' }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    <td
+                      class="py-2 px-3 font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap"
+                    >
+                      {{ formatDate(check.timestamp) }}
+                    </td>
+                    <td class="py-2 px-3">
+                      <UBadge
+                        :color="getStatusColor(check.status)"
+                        variant="subtle"
+                        size="sm"
+                      >
+                        {{ check.status || 'timeout' }}
+                      </UBadge>
+                    </td>
+                    <td class="py-2 px-3 text-slate-700 dark:text-slate-300">
+                      {{ check.responseTime }} мс
+                    </td>
+                    <td
+                      class="py-2 px-3 text-red-500 dark:text-red-400 text-xs font-mono"
+                    >
+                      {{ check.error ?? '—' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </ClientOnly>
         </UCard>
       </template>
     </div>

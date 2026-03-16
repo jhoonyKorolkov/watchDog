@@ -1,7 +1,7 @@
 import { getRouterParam } from 'h3';
 import { eq } from 'drizzle-orm';
-import { db } from '../../utils/db';
 import { sites } from '../../database/schema';
+import { invalidateSitesCache } from '../../utils/cache';
 
 /**
  * DELETE /api/sites/:id
@@ -32,6 +32,9 @@ export default defineEventHandler(async (event) => {
     .update(sites)
     .set({ deletedAt: Date.now(), isActive: 0 })
     .where(eq(sites.id, id));
+
+  // Инвалидируем кэш после удаления сайта
+  await invalidateSitesCache();
 
   return { success: true, message: 'Сайт перемещён в архив' };
 });

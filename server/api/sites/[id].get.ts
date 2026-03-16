@@ -1,9 +1,8 @@
 import { getRouterParam } from 'h3';
-import { db } from '../../utils/db';
 
 /**
  * GET /api/sites/:id
- * Возвращает данные сайта вместе с последними 50 проверками (по убыванию времени).
+ * Возвращает данные сайта вместе с последними 30 проверками (по убыванию времени).
  */
 export default defineEventHandler(async (event) => {
   const id = Number(getRouterParam(event, 'id'));
@@ -19,10 +18,10 @@ export default defineEventHandler(async (event) => {
     // Не показываем мягко удалённые сайты
     where: (s, { eq, isNull, and }) => and(eq(s.id, id), isNull(s.deletedAt)),
     with: {
-      // Последние 50 проверок — достаточно для графика и таблицы истории
+      // Последние 30 проверок — достаточно для графика и таблицы истории
       checks: {
         orderBy: (c, { desc }) => desc(c.timestamp),
-        limit: 50,
+        limit: 30,
       },
     },
   });
