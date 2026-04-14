@@ -1,16 +1,16 @@
 # WatchDog
 
-WatchDog is a self-hosted uptime monitor for small projects and personal services. It lets you track endpoint availability, inspect recent checks, and receive Telegram alerts when a service goes down or recovers.
+WatchDog — self-hosted сервис для мониторинга доступности сайтов и HTTP endpoint'ов. Приложение позволяет отслеживать текущее состояние сервисов, смотреть историю проверок и получать уведомления в Telegram при падении или восстановлении.
 
-## What It Does
+## Что умеет
 
-- monitors websites and HTTP endpoints on a schedule
-- stores check history in SQLite via Drizzle ORM
-- shows current status, response time, and recent uptime history in the UI
-- sends Telegram notifications on outage and recovery
-- supports Docker-based deployment for a small VPS or home server
+- проверяет сайты и endpoint'ы по расписанию
+- хранит историю проверок в SQLite через Drizzle ORM
+- показывает текущий статус, время ответа и недавнюю историю в интерфейсе
+- отправляет уведомления в Telegram при сбоях и восстановлении
+- поддерживает простой деплой через Docker и Docker Compose
 
-## Stack
+## Стек
 
 - Nuxt 4
 - Nuxt UI
@@ -20,36 +20,36 @@ WatchDog is a self-hosted uptime monitor for small projects and personal service
 - Telegram Bot API
 - Docker / Docker Compose
 
-## Local Setup
+## Локальный запуск
 
-1. Install dependencies:
+1. Установите зависимости:
 
 ```bash
 npm install
 ```
 
-2. Create your local environment file:
+2. Создайте локальный файл окружения:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Fill in the required variables in `.env`:
+3. Заполните обязательные переменные в `.env`:
 
 ```env
 NUXT_SESSION_PASSWORD=your-random-session-secret
 ADMIN_PASSWORD=your-admin-password
 ```
 
-4. Start the app:
+4. Запустите проект:
 
 ```bash
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+Приложение будет доступно по адресу `http://localhost:3000`.
 
-## Available Scripts
+## Доступные команды
 
 ```bash
 npm run dev
@@ -58,34 +58,34 @@ npm run preview
 npm run typecheck
 ```
 
-## Environment Variables
+## Переменные окружения
 
-Required:
+Обязательные:
 
-- `NUXT_SESSION_PASSWORD`: session secret for `nuxt-auth-utils`
-- `ADMIN_PASSWORD`: password for the admin login
+- `NUXT_SESSION_PASSWORD` — секрет для сессий `nuxt-auth-utils`
+- `ADMIN_PASSWORD` — пароль администратора для входа
 
-Optional:
+Опциональные:
 
-- `MONITOR_ENABLED`: enable or disable scheduled monitoring
-- `MONITOR_SCHEDULE`: cron schedule for checks
-- `TELEGRAM_BOT_TOKEN`: Telegram bot token
-- `TELEGRAM_CHAT_ID`: Telegram chat ID for alerts
-- `DATABASE_URL`: custom path to the SQLite database
+- `MONITOR_ENABLED` — включает или отключает фоновый мониторинг
+- `MONITOR_SCHEDULE` — cron-расписание проверок
+- `TELEGRAM_BOT_TOKEN` — токен Telegram-бота
+- `TELEGRAM_CHAT_ID` — chat id для отправки уведомлений
+- `DATABASE_URL` — кастомный путь к SQLite базе
 
-See [.env.example](.env.example) for the full template.
+Полный шаблон доступен в [.env.example](.env.example).
 
-## Architecture Notes
+## Архитектура
 
-- `server/tasks/monitor.ts` runs scheduled checks and updates the cached snapshot
-- `server/api/status.get.ts` serves the dashboard from cache when possible
-- `server/api/sites/*.ts` handles CRUD operations for monitored sites
-- `server/utils/telegram.ts` sends outage and recovery notifications
+- `server/tasks/monitor.ts` запускает фоновые проверки и обновляет snapshot статусов
+- `server/api/status.get.ts` отдаёт данные для дашборда, используя кэш при наличии
+- `server/api/sites/*.ts` отвечает за CRUD-операции над отслеживаемыми сайтами
+- `server/utils/telegram.ts` отправляет уведомления о падении и восстановлении
 
-## Deployment
+## Деплой
 
-Docker deployment instructions are documented in [DEPLOY.md](DEPLOY.md).
+Инструкция по деплою через Docker находится в [DEPLOY.md](DEPLOY.md).
 
-## Portfolio Notes
+## Для портфолио
 
-This project was built as a practical monitoring tool for personal infrastructure. The focus was on shipping a useful end-to-end product: authenticated dashboard, background checks, persistence, alerting, and lightweight self-hosted deployment.
+Этот проект вырос из практической задачи мониторинга личной инфраструктуры. Основной акцент был на полноценном end-to-end решении: авторизация, дашборд, фоновые проверки, хранение истории, Telegram-уведомления и лёгкий self-hosted деплой.
