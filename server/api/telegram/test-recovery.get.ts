@@ -1,11 +1,8 @@
-/**
- * Тестовый эндпоинт для симуляции уведомления о восстановлении сайта.
- * Отправляет тестовое сообщение в формате реального уведомления о восстановлении.
- *
- * Использование: GET /api/telegram/test-recovery
- */
+import { assertDevelopmentOnly } from '../../utils/dev-only';
+
 export default defineEventHandler(async (event) => {
-  // Симулируем данные восстановленного сайта
+  assertDevelopmentOnly('Тестовое уведомление Telegram');
+
   const testSiteRecovered = {
     name: 'Example.com (ТЕСТ)',
     url: 'https://example.com',
@@ -13,7 +10,6 @@ export default defineEventHandler(async (event) => {
     responseTime: 234,
   };
 
-  // Формируем сообщение о восстановлении сайта (как в monitor.ts)
   const message =
     `✅ <b>Сайт восстановлен!</b>\n\n` +
     `📍 ${testSiteRecovered.name}\n` +

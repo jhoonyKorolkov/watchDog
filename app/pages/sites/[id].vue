@@ -1,26 +1,18 @@
 <script setup lang="ts">
 const route = useRoute();
-
-// Получаем числовой ID из параметра маршрута /sites/:id
 const siteId = Number(route.params.id);
-
-// useFetch с автовыведенным типом из Nitro-эндпоинта GET /api/sites/:id
 const {
   data: site,
   pending,
   error,
   refresh,
 } = await useFetch(`/api/sites/${siteId}`);
+const toast = useToast();
 
-// Редирект на главную, если сайт не найден (404 от API)
 if (error.value?.statusCode === 404) {
   await navigateTo('/');
 }
 
-/**
- * Форматирует Unix-время (мс) в читаемую дату.
- * Date.now() и БД хранят мс, поэтому делить не нужно.
- */
 const formatDate = (ts: number) =>
   new Date(ts).toLocaleString('ru-RU', {
     day: '2-digit',
@@ -31,14 +23,12 @@ const formatDate = (ts: number) =>
     second: '2-digit',
   });
 
-// Цвет бейджа по HTTP-статусу
 const getStatusColor = (status?: number) => {
   if (!status) return 'neutral';
   if (status < 400) return 'success';
   return 'error';
 };
 
-// Вычисляем процент успешных проверок из имеющейся истории
 const uptimePercent = computed(() => {
   const checks = site.value?.checks;
   if (!checks?.length) return null;
@@ -46,7 +36,6 @@ const uptimePercent = computed(() => {
   return ((ok / checks.length) * 100).toFixed(1);
 });
 
-// Среднее время ответа по успешным проверкам
 const avgResponseTime = computed(() => {
   const checks = site.value?.checks?.filter(
     (c) => c.status > 0 && c.status < 400,
@@ -56,33 +45,39 @@ const avgResponseTime = computed(() => {
   return Math.round(sum / checks.length);
 });
 
-// Генерация тестовых данных (только в dev режиме)
 const isDev = import.meta.dev;
 const isGenerating = ref(false);
-const generationError = ref<string | null>(null);
 
 const generateTestData = async () => {
   if (isGenerating.value) return;
 
   isGenerating.value = true;
-  generationError.value = null;
 
   try {
-    const result = await $fetch(`/api/sites/${siteId}/generate-test-data`, {
+    const result = await $fetch<{
+      message: string;
+      stats: {
+        total: number;
+      };
+    }>(`/api/sites/${siteId}/generate-test-data`, {
       method: 'POST',
-      timeout: 30000, // 30 секунд таймаут
+      timeout: 30000,
     });
 
-    console.log('Тестовые данные созданы:', result);
+    toast.add({
+      title: 'Тестовые данные готовы',
+      description: result.message,
+      color: 'success',
+    });
 
-    // Небольшая задержка перед обновлением, чтобы данные точно записались
     await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Обновляем данные после генерации
     await refresh();
   } catch (err: any) {
-    console.error('Ошибка генерации тестовых данных:', err);
-    generationError.value = err.message || 'Не удалось создать тестовые данные';
+    toast.add({
+      title: 'Ошибка',
+      description: err.message || 'Не удалось создать тестовые данные',
+      color: 'error',
+    });
   } finally {
     isGenerating.value = false;
   }
@@ -91,10 +86,9 @@ const generateTestData = async () => {
 
 <template>
   <div
-    class="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
   >
     <div class="container mx-auto py-12 px-4 max-w-4xl">
-      <!-- Кнопка назад -->
       <div class="mb-8">
         <UButton
           icon="heroicons:arrow-left-20-solid"
@@ -106,7 +100,6 @@ const generateTestData = async () => {
         </UButton>
       </div>
 
-      <!-- Скелетон при загрузке -->
       <div v-if="pending" class="space-y-6">
         <USkeleton class="h-10 w-64" />
         <USkeleton class="h-32 w-full" />
@@ -114,14 +107,12 @@ const generateTestData = async () => {
       </div>
 
       <template v-else-if="site">
-        <!-- Заголовок страницы -->
         <div class="flex items-start justify-between mb-8 gap-4">
           <div>
             <div class="flex items-center gap-3 mb-2">
               <h1 class="text-3xl font-bold text-slate-900 dark:text-white">
                 {{ site.name }}
               </h1>
-              <!-- Бейдж активности сайта -->
               <UBadge
                 :color="site.isActive ? 'success' : 'neutral'"
                 variant="subtle"
@@ -162,7 +153,6 @@ const generateTestData = async () => {
           </div>
         </div>
 
-        <!-- Сводка: 3 ключевые метрики -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <UCard>
             <div class="text-center py-2">
@@ -208,7 +198,6 @@ const generateTestData = async () => {
           </UCard>
         </div>
 
-        <!-- Параметры сайта -->
         <UCard class="mb-8">
           <template #header>
             <h2 class="text-base font-semibold text-slate-900 dark:text-white">
@@ -255,12 +244,10 @@ const generateTestData = async () => {
           </dl>
         </UCard>
 
-        <!-- График статистики -->
         <div class="mb-8">
           <SiteStatsChart :site-id="siteId" />
         </div>
 
-        <!-- Таблица истории проверок -->
         <UCard>
           <template #header>
             <h2 class="text-base font-semibold text-slate-900 dark:text-white">
@@ -271,7 +258,6 @@ const generateTestData = async () => {
             </h2>
           </template>
 
-          <!-- Нет данных -->
           <div
             v-if="!site.checks?.length"
             class="text-center py-8 text-slate-400"
@@ -283,7 +269,6 @@ const generateTestData = async () => {
             <p>Проверок ещё не было</p>
           </div>
 
-          <!-- Таблица -->
           <ClientOnly v-else>
             <div class="overflow-x-auto">
               <table class="w-full text-sm">

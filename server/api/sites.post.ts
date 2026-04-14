@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { db } from '../utils/db';
 import { sites } from '../database/schema';
 import { invalidateSitesCache } from '../utils/cache';
+import { assertNotPrivateUrl } from '../utils/ssrf';
 
-// Зод схема для валидации данных при создании сайта
 const createSiteSchema = z.object({
   name: z
     .string()
@@ -26,45 +26,10 @@ const createSiteSchema = z.object({
  */
 export default defineEventHandler(async (event) => {
   try {
-    // Получаем тело запроса
     const body = await readBody(event);
-
-    // Валидируем данные через Зод
     const validatedData = createSiteSchema.parse(body);
+    assertNotPrivateUrl(validatedData.url);
 
-    // Проверяем, что URL не является локальным адресом (SSRF защита)
-    const urlObject = new URL(validatedData.url);
-    const hostname = urlObject.hostname.toLowerCase();
-
-    // Запрещаем локальные адреса и приватные подсети
-    const isLocalhost =
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname.startsWith('192.168.') ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('172.16.') ||
-      hostname.startsWith('172.17.') ||
-      hostname.startsWith('172.18.') ||
-      hostname.startsWith('172.19.') ||
-      hostname.startsWith('172.20.') ||
-      hostname.startsWith('172.21.') ||
-      hostname.startsWith('172.22.') ||
-      hostname.startsWith('172.23.') ||
-      hostname.startsWith('172.24.') ||
-      hostname.startsWith('172.25.') ||
-      hostname.startsWith('172.26.') ||
-      hostname.startsWith('172.27.') ||
-      hostname.startsWith('172.28.') ||
-      hostname.startsWith('172.29.') ||
-      hostname.startsWith('172.30.') ||
-      hostname.startsWith('172.31.');
-
-    if (isLocalhost) {
-      throw new Error('Использование локальных адресов запрещено');
-    }
-
-    // Вставляем новый сайт в БД и получаем объект созданного сайта
     const [newSite] = await db
       .insert(sites)
       .values({
@@ -75,17 +40,14 @@ export default defineEventHandler(async (event) => {
       })
       .returning();
 
-    // Инвалидируем кэш после добавления нового сайта
     await invalidateSitesCache();
 
-    // Возвращаем успешный ответ с данными созданного сайта
     return {
       success: true,
       message: 'Сайт успешно добавлен',
       data: newSite,
     };
   } catch (error) {
-    // Обработка ошибок валидации Зод
     if (error instanceof z.ZodError) {
       throw createError({
         statusCode: 400,
@@ -96,7 +58,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Обработка других ошибок
     if (error instanceof Error) {
       throw createError({
         statusCode: 400,

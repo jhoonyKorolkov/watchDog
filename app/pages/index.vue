@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// Определяем тип данных сайта с проверками
-// Необходим из-за использования кэша, где теряется автоматический вывод типов
 type SiteWithChecks = {
   id: number;
   url: string;
@@ -26,28 +24,18 @@ const {
 } = await useFetch<SiteWithChecks[]>('/api/status');
 
 const toast = useToast();
-
-// Управляет видимостью модального окна добавления сайта
 const isModalOpen = ref(false);
 
-/**
- * Вызывается по событию success из AddSiteForm:
- * закрывает модалку и обновляет список сайтов.
- */
 const handleSiteAdded = () => {
   isModalOpen.value = false;
   refresh();
 };
 
-// Тип одной записи из ответа /api/status (сайт + последний check)
 type SiteEntry = SiteWithChecks;
-
-// null = модалка закрыта; SiteEntry = открыта с данными этого сайта
 const editingSite = ref<SiteEntry | null>(null);
 const deletingSite = ref<SiteEntry | null>(null);
 const isDeleting = ref(false);
 
-// Вычисляемые v-model для UModal — управляют через ref-объекты
 const isEditModalOpen = computed({
   get: () => editingSite.value !== null,
   set: (v: boolean) => {
@@ -69,13 +57,11 @@ const openDeleteModal = (site: SiteEntry) => {
   deletingSite.value = site;
 };
 
-/** Закрывает модалку редактирования и перезапрашивает список */
 const handleSiteUpdated = () => {
   editingSite.value = null;
   refresh();
 };
 
-/** Отправляет DELETE-запрос, затем закрывает модалку и обновляет список */
 const handleDeleteConfirm = async () => {
   if (!deletingSite.value) return;
   isDeleting.value = true;
@@ -114,7 +100,6 @@ const switchActivateSite = async (site: SiteEntry, newValue: boolean) => {
       body: { isActive },
     });
 
-    // Перезагружаем данные с сервера для обновления UI
     await refresh();
 
     toast.add({
@@ -137,18 +122,11 @@ const switchActivateSite = async (site: SiteEntry, newValue: boolean) => {
       color: 'error',
     });
 
-    // При ошибке тоже обновляем данные, чтобы вернуть переключатель в исходное состояние
     await refresh();
   }
 };
 
-// useColorMode — composable Nuxt UI/Color Mode для переключения темы
 const colorMode = useColorMode();
-
-/**
- * Переключает тему между светлой и тёмной.
- * Значение сохраняется в localStorage автоматически через @nuxt/color-mode.
- */
 const toggleColorMode = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
 };
@@ -168,30 +146,26 @@ const getStatusIcon = (status?: number) => {
 
 <template>
   <div
-    class="min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
   >
     <div class="container mx-auto py-12 px-4">
-      <!-- Заголовок -->
       <div class="flex items-center justify-between mb-12">
         <div>
-          <!-- <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">
-            🐕 Сторожевой Пёс
-          </h1> -->
+          <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+            WatchDog
+          </h1>
           <p class="text-lg text-slate-600 dark:text-slate-400">
-            Мониторинг проектов в реальном времени
+            Мониторинг доступности сервисов в реальном времени
           </p>
         </div>
         <div class="flex items-center gap-3">
           <ClientOnly>
             <template #fallback>
-              <!-- Placeholder: skeleton-кнопки для плавного перехода -->
               <USkeleton class="h-10 w-10 rounded-md" />
               <USkeleton class="h-10 w-36 rounded-md" />
               <USkeleton class="h-10 w-28 rounded-md" />
             </template>
 
-            <!-- Реальные кнопки: появляются после hydration -->
-            <!-- Кнопка переключения светлой/тёмной темы -->
             <UButton
               :icon="
                 colorMode.value === 'dark'
@@ -208,7 +182,6 @@ const getStatusIcon = (status?: number) => {
               "
               @click="toggleColorMode"
             />
-            <!-- Кнопка открывает UModal с формой добавления сайта -->
             <UButton
               icon="heroicons:plus-20-solid"
               size="lg"
@@ -231,7 +204,6 @@ const getStatusIcon = (status?: number) => {
         </div>
       </div>
 
-      <!-- Модальное окно добавления нового сайта -->
       <UModal
         v-model:open="isModalOpen"
         title="Добавить сайт"
@@ -242,14 +214,12 @@ const getStatusIcon = (status?: number) => {
         </template>
       </UModal>
 
-      <!-- Модальное окно редактирования сайта -->
       <UModal
         v-model:open="isEditModalOpen"
         :title="`Редактировать: ${editingSite?.name ?? ''}`"
         description="Измените параметры сайта для мониторинга"
       >
         <template #body>
-          <!-- v-if гарантирует сброс состояния формы при каждом открытии -->
           <EditSiteForm
             v-if="editingSite"
             :site="editingSite"
@@ -258,7 +228,6 @@ const getStatusIcon = (status?: number) => {
         </template>
       </UModal>
 
-      <!-- Модальное окно подтверждения удаления -->
       <UModal
         v-model:open="isDeleteModalOpen"
         title="Удалить сайт"
@@ -284,12 +253,10 @@ const getStatusIcon = (status?: number) => {
         </template>
       </UModal>
 
-      <!-- Прелоадер: показывается пока загружаются данные -->
       <div
         v-if="pending"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
-        <!-- Генерируем 3 skeleton-карточки для эффекта загрузки -->
         <UCard v-for="i in 3" :key="i" class="animate-pulse">
           <template #header>
             <div class="flex items-center justify-between">
@@ -299,13 +266,11 @@ const getStatusIcon = (status?: number) => {
           </template>
 
           <div class="space-y-4">
-            <!-- URL skeleton -->
             <div>
               <USkeleton class="h-3 w-12 mb-2" />
               <USkeleton class="h-4 w-full" />
             </div>
 
-            <!-- Интервал и Response Time skeleton -->
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <USkeleton class="h-3 w-16 mb-2" />
@@ -331,7 +296,6 @@ const getStatusIcon = (status?: number) => {
         </UCard>
       </div>
 
-      <!-- Сетка карточек: показывается когда данные загружены -->
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <UCard
           v-for="site in sites"
@@ -417,7 +381,6 @@ const getStatusIcon = (status?: number) => {
             </div>
           </div>
 
-          <!-- Footer: статус слева, кнопки действий справа -->
           <template #footer>
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -445,14 +408,11 @@ const getStatusIcon = (status?: number) => {
               <div class="flex items-center gap-1">
                 <ClientOnly>
                   <template #fallback>
-                    <!-- Placeholder: 3 skeleton-кнопки -->
                     <USkeleton class="h-8 w-8 rounded-md" />
                     <USkeleton class="h-8 w-8 rounded-md" />
                     <USkeleton class="h-8 w-8 rounded-md" />
                   </template>
 
-                  <!-- Реальные кнопки действий -->
-                  <!-- Кнопка открывает модалку редактирования с данными этой карточки -->
                   <UButton
                     size="md"
                     color="info"
@@ -472,7 +432,6 @@ const getStatusIcon = (status?: number) => {
                     @click="openEditModal(site)"
                     class="cursor-pointer"
                   />
-                  <!-- Кнопка открывает модалку подтверждения удаления -->
                   <UButton
                     size="md"
                     color="error"
@@ -489,7 +448,6 @@ const getStatusIcon = (status?: number) => {
         </UCard>
       </div>
 
-      <!-- Пусто: показывается когда данные загружены, но список пуст -->
       <div
         v-if="!pending && (!sites || sites.length === 0)"
         class="text-center py-12"

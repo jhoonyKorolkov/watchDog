@@ -1,11 +1,8 @@
-/**
- * Тестовый эндпоинт для симуляции уведомления о падении сайта.
- * Отправляет тестовое сообщение в формате реального уведомления о проблеме.
- *
- * Использование: GET /api/telegram/test-alert
- */
+import { assertDevelopmentOnly } from '../../utils/dev-only';
+
 export default defineEventHandler(async (event) => {
-  // Симулируем данные упавшего сайта
+  assertDevelopmentOnly('Тестовое уведомление Telegram');
+
   const testSiteDown = {
     name: 'Example.com (ТЕСТ)',
     url: 'https://example.com',
@@ -14,7 +11,6 @@ export default defineEventHandler(async (event) => {
     responseTime: 5234,
   };
 
-  // Формируем сообщение о падении сайта (как в monitor.ts)
   const message =
     `🚨 <b>Сайт недоступен!</b>\n\n` +
     `📍 ${testSiteDown.name}\n` +
